@@ -23,9 +23,12 @@ module.exports = async function (browser) {
         await pret();
         const frame = page.frames().find(f => f.url().includes('montage='));
         const ajouter = async (texte, debut, fin) => {
-            await page.locator('#montage-annotation-texte').fill(texte);
             await page.locator('#montage-annotation-debut').fill(String(debut));
             await page.locator('#montage-annotation-fin').fill(String(fin));
+            await page.locator('#montage-annotation-texte').fill(texte);
+            r.egal('saisir le texte conserve les étapes déjà choisies pour ' + texte,
+                await page.evaluate(() => [document.querySelector('#montage-annotation-debut').value,
+                    document.querySelector('#montage-annotation-fin').value]), [String(debut), String(fin)]);
             await page.locator('#montage-annotation-ajouter').click();
         };
         await page.getByRole('button', { name: 'Médiatrice et non bissectrice', exact: true }).click();
