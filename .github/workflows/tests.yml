@@ -60,7 +60,7 @@ jobs:
         run: node tests/run.cjs 69-rejouer
 
       - name: Vérifier le montage avant publication
-        run: node tests/run.cjs 70-montage
+        run: node tests/run.cjs montage
 
       - name: Vérifier les collages du tableau et des applications extérieures
         run: node tests/run.cjs 71-presse-papiers
