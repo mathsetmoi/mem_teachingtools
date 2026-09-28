@@ -1147,8 +1147,6 @@ document.getElementById('btn-next-page').addEventListener('click', () => { if (c
 document.getElementById('btn-add-page').addEventListener('click', () => { pages.push(createNewPage()); loadPage(pages.length - 1); });
 
 // --- MODALES ET INITIALISATION ---
-function openDonationModal() { document.getElementById('donationModal').style.display = 'flex'; }
-function closeDonationModal() { document.getElementById('donationModal').style.display = 'none'; }
 
 let confirmCallback = null;
 let cancelCallback = null;
@@ -1535,8 +1533,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.modal-backdrop').forEach(modal => {
         modal.addEventListener('mousedown', function (e) {
             if (e.target === this) {
-                if (this.id === 'donationModal') closeDonationModal();
-                else if (this.id === 'confirm-modal') triggerConfirmCancel();
+                if (this.id === 'confirm-modal') triggerConfirmCancel();
                 else if (this.id === 'help-modal') this.style.display = 'none';
             }
         });
@@ -34152,21 +34149,6 @@ setTimeout(() => {
         localStorage.setItem('auTableau_welcome_v2', 'true');
     }
 }, 1000);
-
-function openDonateModal() {
-    document.getElementById('donate-modal').style.display = 'flex';
-}
-
-function closeDonateModal() {
-    document.getElementById('donate-modal').style.display = 'none';
-}
-
-document.getElementById('donate-modal').addEventListener('click', function (e) {
-    if (e.target === this) {
-        closeDonateModal();
-    }
-});
-
 function openFormulaModal() {
     const modal = document.getElementById('formula-modal');
     const input = document.getElementById('formula-input');

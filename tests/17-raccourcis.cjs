@@ -935,20 +935,9 @@ module.exports = async function (browser) {
 
     await page.evaluate(() => { if (!document.body.classList.contains('focus-mode')) toggleFocusMode(); });
 
-    // Le cœur « Soutenir le projet » ne reste pas devant la classe.
-    // Il s'efface en fondu : on laisse la transition se terminer.
-    await page.waitForTimeout(400);
-    const cacheEnFocus = await page.evaluate(() =>
-        getComputedStyle(document.getElementById('donate-float-btn')).opacity === '0');
+    // Le mode Focus est remis à plat pour le chapitre suivant.
     await page.evaluate(() => document.body.classList.remove('focus-mode'));
-    await page.waitForTimeout(400);
-    const coeur = {
-        cache: cacheEnFocus,
-        visibleHorsFocus: await page.evaluate(() =>
-            getComputedStyle(document.getElementById('donate-float-btn')).opacity !== '0')
-    };
-    r.verifie('le bouton « Soutenir » s\'efface en mode Focus', coeur.cache);
-    r.verifie('et revient quand on en sort', coeur.visibleHorsFocus);
+    await page.waitForTimeout(200);
 
     // La touche « D » au clavier : c'est elle le vrai raccourci, Ctrl+L
     // n'étant pas récupérable au navigateur.

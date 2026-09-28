@@ -31,7 +31,7 @@
     <script src="./lib/localforage/localforage.min.js?v=1"></script>
     <script src="./lib/qrcode/qrcode.min.js?v=1"></script>
     <script src="./lib/fonts/nunito-base64.js?v=1"></script>
-    <link rel="stylesheet" href="style.css?v=171">
+    <link rel="stylesheet" href="style.css?v=172">
     <link rel="stylesheet" href="./lib/lecteur/montage.css?v=1">
 </head>
 
@@ -1800,52 +1800,6 @@
         </div>
     </div>
 
-    <!-- Icône cœur fixe en bas à droite -->
-    <button id="donate-float-btn" onclick="openDonateModal()" style="position: fixed; bottom: 20px; right: 20px; width: 50px; height: 50px; border-radius: 50%; background: #e74c3c; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3); transition: all 0.2s; z-index: 1000;" title="Soutenir le projet" onmouseover="this.style.transform='scale(1.1)'; this.style.boxShadow='0 6px 16px rgba(231, 76, 60, 0.4)'" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(231, 76, 60, 0.3)'">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" width="24" height="24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-    </button>
-
-    <div id="donate-modal" class="modal-backdrop" style="display: none;">
-        <div class="modal-box">
-            <div class="modal-text" style="margin-bottom: 15px;">
-                <h3 style="margin-top:0; color:#e74c3c; text-align:center;">Vous aimez Au Tableau ?</h3>
-                <p style="font-size:14px; color:#555; line-height:1.5; text-align:center;">
-                    Cet outil est développé bénévolement pour aider professeurs et élèves.<br>
-                    Il n'y a pas de pub, pas d'inscription. Juste un tableau blanc numérique !<br>
-                    Si vous souhaitez soutenir ma démarche et l'évolution du projet, vous pouvez faire un don libre ci-dessous.
-                </p>
-            </div>
-            <div class="export-actions-grid" style="display:flex; justify-content:center; gap:10px;">
-                <button class="btn-action secondary" onclick="closeDonateModal()">Plus tard</button>
-                <a href="https://www.paypal.com/donate/?hosted_button_id=VKZXDC5BM2GHA" target="_blank"
-                    class="btn-action primary"
-                    style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center; background:#e74c3c;"
-                    onclick="closeDonateModal()">
-                    Faire un don
-                </a>
-            </div>
-            <div style="margin-top:10px; font-size:10px; color:#999; text-align:center;">
-                🔒 Paiement sécurisé via PayPal
-            </div>
-            <hr style="border:0; border-top:1px solid #eee; margin: 15px 0;">
-            <p style="font-size:12px; color:#777; text-align:center; margin:10px 0;">
-                Suivez nos réseaux :<br>
-                <a href="https://www.facebook.com/profile.php?id=61587050556059" target="_blank"
-                    style="color:#3b5998; text-decoration:none; font-weight:bold; margin:0 8px;">
-                    📘 Facebook
-                </a>
-            </p>
-            <hr style="border:0; border-top:1px solid #eee; margin: 15px 0;">
-            <p style="font-size:12px; color:#777; text-align:center;">
-                Un bug ? Une suggestion ?<br>
-                <a href="#" onclick="this.href='mailto:' + 'devoddere.remy' + '@' + 'gmail.com'; return true;"
-                    style="color:#3498db; text-decoration:none; font-weight:bold;">
-                    ✉️ Me contacter
-                </a>
-            </p>
-        </div>
-    </div>
-
     <div id="custom-prompt-modal"
         style="display: none; position: absolute; left: 200px; top: 150px; width: 320px; z-index: 20000; flex-direction: column; background: #ffffff; border-radius: 10px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); border: 1px solid #dfe6e9; overflow: hidden;">
         <div class="drag-handle-prompt"
@@ -3452,7 +3406,7 @@
          avec l'application : la géographie doit marcher sans connexion. -->
     <script src="./lib/maps/monde.js?v=1"></script>
     <script src="./lib/tableau/presse-papiers.js?v=1"></script>
-    <script src="script.js?v=292"></script>
+    <script src="script.js?v=293"></script>
     <script src="pc-figures.js?v=1"></script>
     <script src="plugin.js?v=106"></script>
     <script src="./lib/numworks/numworks-plugin.js?v=2"></script>

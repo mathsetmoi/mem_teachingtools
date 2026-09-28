@@ -2027,15 +2027,6 @@ body.sans-tiroirs .drawer-toggle-v {
     cursor: pointer;
     transition: all 0.3s;
 }
-
-/* Le cœur « Soutenir le projet » n'a rien à faire devant une classe : le mode
-   Focus efface tout le reste, il partait seul avec sa pastille rouge. */
-body.focus-mode #donate-float-btn,
-body.sans-tiroirs #donate-float-btn {
-    opacity: 0 !important;
-    pointer-events: none !important;
-}
-
 #exit-focus-cross:hover {
     color: var(--red);
     background: rgba(231, 76, 60, 0.1);
@@ -2972,95 +2963,6 @@ input[type=range]::-moz-range-thumb {
     background: #5f27cd;
     transform: translateY(-2px);
 }
-
-.donation-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
-    z-index: 99999;
-    display: none;
-    align-items: center;
-    justify-content: center;
-}
-
-.donation-box {
-    background: white;
-    padding: 30px;
-    border-radius: var(--arrondi);
-    width: 420px;
-    max-width: 90%;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-    text-align: center;
-    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
-    transition: background 0.3s;
-}
-
-.donation-title {
-    margin-top: 0;
-    color: #e74c3c;
-    font-size: 22px;
-    font-weight: 900;
-}
-
-.donation-text {
-    font-size: 14px;
-    color: #2d3436;
-    line-height: 1.6;
-    font-weight: 600;
-    margin: 15px 0;
-    text-align: left;
-    transition: color 0.3s;
-}
-
-.donation-btns {
-    display: flex;
-    gap: 12px;
-    margin-top: 25px;
-}
-
-.donation-btn-close {
-    flex: 1;
-    background: #f1f2f6;
-    border: none;
-    padding: 12px;
-    border-radius: 8px;
-    font-weight: 800;
-    font-family: inherit;
-    cursor: pointer;
-    color: #636e72;
-    transition: 0.2s;
-}
-
-.donation-btn-close:hover {
-    background: #dfe6e9;
-    color: #2d3436;
-}
-
-.donation-btn-link {
-    flex: 2;
-    background: #e74c3c;
-    color: white;
-    border: none;
-    padding: 12px;
-    border-radius: 8px;
-    font-weight: 800;
-    font-family: inherit;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    transition: 0.2s;
-    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.2);
-}
-
-.donation-btn-link:hover {
-    background: #c0392b;
-    transform: translateY(-1px);
-    box-shadow: 0 6px 15px rgba(231, 76, 60, 0.3);
-}
-
 .page-controls,
 .zoom-container {
     display: flex;
@@ -3355,20 +3257,17 @@ body.dark-mode {
     background: #4b6584;
 }
 
-.dark-mode .modal-box,
-.dark-mode .donation-box {
+.dark-mode .modal-box {
     background: #2d3436;
     color: #dfe6e9;
     border-color: var(--contour);
 }
 
-.dark-mode .modal-title,
-.dark-mode .donation-title {
+.dark-mode .modal-title {
     color: #a29bfe;
 }
 
-.dark-mode .modal-text,
-.dark-mode .donation-text {
+.dark-mode .modal-text {
     color: #b2bec3;
 }
 
@@ -3437,16 +3336,6 @@ body.dark-mode {
 }
 
 .dark-mode .btn-action.secondary:hover {
-    background: #b2bec3;
-    color: #2d3436;
-}
-
-.dark-mode .donation-btn-close {
-    background: #636e72;
-    color: #dfe6e9;
-}
-
-.dark-mode .donation-btn-close:hover {
     background: #b2bec3;
     color: #2d3436;
 }
