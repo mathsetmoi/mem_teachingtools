@@ -1087,6 +1087,7 @@ function loadPage(index) {
     syncPage();
     currentPageIndex = index;
     const p = pages[index];
+    if (window.FilmComplet) FilmComplet.preparerArchive(p);
 
     points = p.points || []; segments = p.segments || []; circles = p.circles || []; rectangles = p.rectangles || []; texts = p.texts || [];
     freehands = p.freehands || []; curves = p.curves || []; polygons = p.polygons || []; images = p.images || []; arcs = p.arcs || []; htmlPostits = p.htmlPostits || [];
@@ -1807,6 +1808,7 @@ function cancelRestore() {
 // redéroule en historique au chargement.
 function pagesForStorage() {
     return pages.map(p => {
+        if (window.FilmComplet) FilmComplet.preparerArchive(p);
         const pCopy = { ...p };
         delete pCopy.history;
         pCopy.images = packImages(p.images);   // sources mutualisées dans la table d'images
@@ -1916,7 +1918,18 @@ function saveAppLocal(immediate) {
         return writeAppLocal();
     }
     clearTimeout(autoSaveTimer);
-    autoSaveTimer = setTimeout(() => { autoSaveTimer = null; writeAppLocal(); }, 1500);
+    const quandLaMainSeLeve = () => {
+        // Préparer toutes les pages peut bloquer le fil de l'interface. Une
+        // sauvegarde différée ne doit pas commencer au milieu d'une lettre.
+        // Les sauvegardes immédiates (fermeture, onglet caché) restent prioritaires.
+        if (isDrawingFreehand && currentFreehand) {
+            autoSaveTimer = setTimeout(quandLaMainSeLeve, 200);
+            return;
+        }
+        autoSaveTimer = null;
+        writeAppLocal();
+    };
+    autoSaveTimer = setTimeout(quandLaMainSeLeve, 1500);
 }
 
 // On n'attend pas la temporisation si l'onglet passe en arrière-plan ou se ferme
@@ -2078,6 +2091,7 @@ const FILM_FAMILLES = ['points', 'segments', 'circles', 'rectangles', 'texts',
 
 let filmPas = [];             // parallèle à `history` : chaque case dit ce qui a changé
 let filmDernierEtat = null;   // la dernière case, déjà relue : évite un JSON.parse par geste
+let dernierEtatEncode = null;
 
 // Ce qui sépare deux états. `precedent` à null donne l'étape entière : c'est
 // toujours le cas de la première case, sur laquelle tout le reste s'appuie.
@@ -2090,7 +2104,7 @@ function etapeDuFilm(precedent, courant) {
         let prolonge = !!old && old.length <= arr.length;
         if (prolonge) {
             for (let i = 0; i < old.length; i++) {
-                if (JSON.stringify(old[i]) !== JSON.stringify(arr[i])) { prolonge = false; break; }
+                if (old[i] !== arr[i] && JSON.stringify(old[i]) !== JSON.stringify(arr[i])) { prolonge = false; break; }
             }
         }
         if (prolonge) {
@@ -2124,9 +2138,24 @@ function deroulerLeFilm(film) {
 
 // L'historique perd ses premières cases quand il déborde. La case qui devient
 // la première ne peut plus être une simple différence : on la redonne entière.
-function recalerLeDebutDuFilm() {
+function recalerLeDebutDuFilm(debut) {
     if (!filmPas.length || !history.length) return;
-    try { filmPas[0] = etapeDuFilm(null, JSON.parse(history[0])); } catch (e) { filmPas = []; }
+    try {
+        // Les étapes sont des instantanés détachés : leurs objets peuvent
+        // être partagés. Reprendre le début évite de relire tous les anciens
+        // points depuis JSON à chaque trait lorsque l'historique est plein.
+        let courant = null;
+        (debut || []).forEach(pas => {
+            const suivant = {};
+            for (const f of FILM_FAMILLES) {
+                const d = pas[f];
+                suivant[f] = d === undefined ? (courant ? courant[f] : [])
+                    : Array.isArray(d) ? d : (courant ? courant[f] : []).concat(d['+'] || []);
+            }
+            courant = suivant;
+        });
+        filmPas[0] = etapeDuFilm(null, courant || JSON.parse(history[0]));
+    } catch (e) { filmPas = []; }
 }
 
 // Filet : si le film et l'historique cessent d'avoir la même longueur, c'est
@@ -2703,8 +2732,39 @@ function trimHistory() {
         historyIndex--;
         coupe++;
     }
-    if (coupe) { filmPas.splice(0, coupe); recalerLeDebutDuFilm(); }
+    if (coupe) {
+        const debut = filmPas.slice(0, coupe + 1);
+        filmPas.splice(0, coupe);
+        recalerLeDebutDuFilm(debut);
+    }
     if (historyIndex < 0) historyIndex = 0;
+}
+
+// On encode chaque famille une fois. Si son début est exactement celui du
+// dernier état enregistré, seuls les nouveaux objets doivent être relus.
+// Comparer les chaînes vérifie aussi les modifications faites en place :
+// aucune confiance dans l'identité d'un tableau ou d'un objet mutable.
+function encoderEtatPourHistorique(courant, precedent) {
+    const chaines = {}, etat = {}, pas = {}, morceaux = [];
+    for (const f of FILM_FAMILLES) {
+        const s = JSON.stringify(courant[f] || []);
+        chaines[f] = s;
+        morceaux.push('"' + f + '":' + s);
+        const ancien = precedent && precedent.chaines[f];
+        if (ancien === s) {
+            etat[f] = precedent.etat[f];
+        } else if (ancien === '[]' || (ancien && ancien.length > 2
+            && s.startsWith(ancien.slice(0, -1)) && s[ancien.length - 1] === ',')) {
+            const ajout = ancien === '[]' ? JSON.parse(s)
+                : JSON.parse('[' + s.slice(ancien.length, -1) + ']');
+            etat[f] = precedent.etat[f].concat(ajout);
+            pas[f] = { '+': ajout };
+        } else {
+            etat[f] = JSON.parse(s);
+            pas[f] = etat[f];
+        }
+    }
+    return { state: '{' + morceaux.join(',') + '}', chaines, etat, pas };
 }
 
 function saveState() {
@@ -2718,7 +2778,12 @@ function saveState() {
         filmPas = filmPas.slice(0, historyIndex + 1);
         filmDernierEtat = null;   // la dernière case a changé : on la relira
     }
-    const state = JSON.stringify({ points, segments, circles, rectangles, texts, freehands, curves, polygons, images: packImages(images), arcs, htmlPostits });
+    const cache = filmPas.length && dernierEtatEncode
+        && dernierEtatEncode.state === history[historyIndex]
+        && dernierEtatEncode.etat === filmDernierEtat ? dernierEtatEncode : null;
+    const encode = encoderEtatPourHistorique({ points, segments, circles, rectangles, texts,
+        freehands, curves, polygons, images: packImages(images), arcs, htmlPostits }, cache);
+    const state = encode.state;
     if (historyIndex >= 0 && history[historyIndex] === state) return;
     // Le film se tient à jour au fil de l'eau : reconstruire les différences de
     // toute la séance à chaque enregistrement coûterait 220 ms, une par étape
@@ -2728,16 +2793,16 @@ function saveState() {
     // tel quel dans le film y rangeait le tableau vivant, qui continuait
     // ensuite de grandir. La première étape du film finissait par contenir
     // toute la leçon, et le replay démarrait à la fin.
-    let etatDetache = null;
-    try { etatDetache = JSON.parse(state); } catch (e) { etatDetache = null; }
+    const etatDetache = encode.etat;
     if (etatDetache) {
         let precedent = null;
         if (filmPas.length) {
             precedent = filmDernierEtat;
             if (!precedent && history.length) { try { precedent = JSON.parse(history[history.length - 1]); } catch (e) { precedent = null; } }
         }
-        filmPas.push(etapeDuFilm(precedent, etatDetache));
+        filmPas.push(cache ? encode.pas : etapeDuFilm(precedent, etatDetache));
         filmDernierEtat = etatDetache;
+        dernierEtatEncode = encode;
     }
     history.push(state); historyIndex++;
     if (filmPas.length !== history.length) refaireLeFilm();   // désaccord : on repart du vrai historique
@@ -10183,8 +10248,10 @@ canvas.addEventListener('pointerdown', (e) => {
 
     if (e.button === 2 || e.button === 1 || isSpacePressed || mode === 'move') { isPanningView = true; updateCursor(); return; }
 
-    const clickedObj = findObjectAt(rawPos.x, rawPos.y);
-    let actionPos = positionAimantee(rawPos);
+    const mainLevee = mode === 'freehand' || mode === 'highlighter';
+    const clickedObj = mainLevee ? null : findObjectAt(rawPos.x, rawPos.y);
+    let actionPos = positionAimantee(rawPos, mainLevee
+        ? { sansGrille: true, sansIntersection: true, sansFigure: true } : {});
     if (clickedObj && clickedObj.type === 'point') actionPos = { x: getObjectById('point', clickedObj.id).x, y: getObjectById('point', clickedObj.id).y };
 
     if (isZoomBoxing && zoomBox) {
@@ -10233,6 +10300,9 @@ canvas.addEventListener('pointerdown', (e) => {
     }
 
     if (mode === 'freehand' || mode === 'highlighter') {
+        // Les poignées ou le halo d'un ancien survol ne doivent pas être
+        // photographiés avec le fond du nouveau trait.
+        if (selectedItems.length || hoveredObj) { hoveredObj = null; clearSelection(); }
         // ON PREND LA PHOTO MAINTENANT : le trait n'existe pas encore, l'écran
         // montre donc exactement ce qui ne bougera plus jusqu'au relâcher.
         figerLeCalque();
@@ -10889,6 +10959,19 @@ canvas.addEventListener('pointermove', (e) => {
     if (isDrawingPostit && postitBox) { postitBox.endX = rawPos.x; postitBox.endY = rawPos.y; requestAnimationFrame(draw); return; }
     if (isDrawingEllipse && boiteEllipse) { boiteEllipse.endX = rawPos.x; boiteEllipse.endY = rawPos.y; requestAnimationFrame(draw); return; }
     if (boiteTexte) { boiteTexte.x1 = rawPos.x; boiteTexte.y1 = rawPos.y; requestAnimationFrame(draw); return; }
+
+    // Entre deux lettres, le crayon n'a aucun objet à sélectionner. Chercher
+    // tous les anciens points puis repeindre la page à chaque survol rendait
+    // justement le contact suivant tardif sur un tableau chargé.
+    if ((mode === 'freehand' || mode === 'highlighter') && !isDraggingObjs && !draggedHandle) {
+        const effacerLeHalo = !!hoveredObj;
+        hoveredObj = null;
+        mouseLogicalPos = smartPos;
+        lastMouseX = e.clientX; lastMouseY = e.clientY;
+        updateCursor();
+        if (effacerLeHalo) requestAnimationFrame(draw);
+        return;
+    }
 
     hoveredObj = findObjectAt(rawPos.x, rawPos.y);
 

@@ -31,7 +31,7 @@ jobs:
           node-version: '22'
 
       - name: Vérifier le partage et le montage des séances
-        run: node --test tests/publication-isolee.unit.cjs tests/montage-replay.unit.cjs tests/presse-papiers.unit.cjs tests/replay-mobile.unit.cjs
+        run: node --test tests/publication-isolee.unit.cjs tests/montage-replay.unit.cjs tests/presse-papiers.unit.cjs tests/replay-mobile.unit.cjs tests/traces-fluides.unit.cjs
 
       # Playwright pilote le navigateur ; c'est la seule dépendance, et elle
       # ne concerne que les tests — le logiciel, lui, n'en charge aucune.
@@ -43,6 +43,13 @@ jobs:
 
       # Sans CHROMIUM_PATH, le socle prend le navigateur que Playwright vient
       # d'installer : c'est exactement ce qu'on veut ici.
+      - name: Vérifier l’écriture sur un tableau chargé
+        run: |
+          node tests/run.cjs 73-traces-fluides
+          node tests/run.cjs 66-stylet
+          node tests/run.cjs 67-gomme
+          node tests/run.cjs 02-persistance
+
       - name: Vérifier la stabilité du replay sur téléphone
         run: node tests/run.cjs 72-replay-mobile
 
