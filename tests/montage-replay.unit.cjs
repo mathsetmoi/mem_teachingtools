@@ -99,3 +99,51 @@ test('des bornes impossibles sont refusées sans produire de copie', () => {
         assert.throws(() => M.monter(source(), [c]));
     }
 });
+
+test('les annotations suivent les étapes conservées, même après le retrait d’une page', () => {
+    const s = source();
+    s.pages.unshift({ film: [{ freehands: [] }] });
+    const avant = JSON.stringify(s);
+    const m = M.monter(s, [{ page: 0, debut: 0, fin: 0 }, { page: 1, debut: 1, fin: 2 }], true, [
+        { page: 1, debut: 1, fin: 4, texte: '  Médiatrice et non bissectrice  ', style: 'correction' },
+        { page: 1, debut: 1, fin: 2, texte: 'Passage retiré' },
+        { page: 0, debut: 0, fin: 0, texte: 'Page retirée' }
+    ]);
+    assert.deepEqual(simple(m.pages[0].annotationsReplay), [
+        { debut: 1, fin: 2, texte: 'Médiatrice et non bissectrice', style: 'correction' }
+    ]);
+    assert.equal(JSON.stringify(s), avant);
+    assert.equal(JSON.stringify(m).includes('retiré'), false);
+});
+
+test('les messages peuvent se chevaucher, commencer ou finir dans une coupe', () => {
+    const annotations = [
+        { page: 0, debut: 0, fin: 2, texte: 'À recopier', style: 'consigne' },
+        { page: 0, debut: 2, fin: 4, texte: 'Rappel', style: 'rappel' }
+    ];
+    const m = M.monter(source(), [{ page: 0, debut: 2, fin: 2 }], false, annotations);
+    assert.deepEqual(simple(m.pages[0].annotationsReplay), [
+        { debut: 0, fin: 1, texte: 'À recopier', style: 'consigne' },
+        { debut: 2, fin: 3, texte: 'Rappel', style: 'rappel' }
+    ]);
+    const repub = M.monter(m, []);
+    assert.deepEqual(simple(repub.pages[0].annotationsReplay), simple(m.pages[0].annotationsReplay));
+    assert.equal(M.monter(m, [], true, []).pages[0].annotationsReplay, undefined);
+});
+
+test('un tableau sans film accepte une annotation sur son unique étape', () => {
+    const s = { pages: [{ freehands: [], film: [] }] };
+    const m = M.monter(s, [], true, [{ page: 0, debut: 0, fin: 0, texte: 'À terminer', style: 'inconnu' }]);
+    assert.deepEqual(simple(m.pages[0].annotationsReplay), [{ debut: 0, fin: 0, texte: 'À terminer', style: 'consigne' }]);
+    assert.notEqual(M.empreinte(s), M.empreinte(m));
+});
+
+test('un message vide, trop long ou hors du film est refusé avant publication', () => {
+    const valide = { page: 0, debut: 0, fin: 2, texte: 'Voir Classroom' };
+    for (const mauvais of [{ texte: ' ' }, { texte: 'a'.repeat(281) }, { texte: 42 },
+        { page: 8 }, { debut: -1 }, { debut: 3 }, { fin: 5 }, { fin: 2.1 }]) {
+        assert.throws(() => M.monter(source(), [], true, [{ ...valide, ...mauvais }]));
+    }
+    const texte = '<img src=x onerror=alert(1)> & rappel';
+    assert.equal(M.monter(source(), [], true, [{ ...valide, texte }]).pages[0].annotationsReplay[0].texte, texte);
+});

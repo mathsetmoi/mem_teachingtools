@@ -26,10 +26,39 @@
 #montage-resume { margin: 0; }
 #pub-fenetre.pub-montage .pub-aide { margin: 4px 0; }
 #pub-fenetre button:disabled { opacity: .5; cursor: default; }
+.montage-section { display: grid; gap: 8px; border-top: 1px solid var(--pw-trait); padding-top: 12px; margin-top: 6px; font-size: 12px; color: var(--pw-encre); }
+.montage-modeles, .montage-annotation-actions, .montage-annotation-reglages { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.montage-modeles .pw-btn, .montage-annotation .pw-btn { padding: 6px 9px; font-size: 12px; }
+.montage-annotation-reglages .pw-select { width: auto; }
+.montage-annotation-reglages .pub-aide { margin-left: auto; }
+#montage-annotation-texte { resize: vertical; min-height: 60px; }
+.montage-annotations { display: grid; gap: 6px; }
+.montage-annotation { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px; border: 1px solid var(--pw-trait); border-radius: 8px; }
+.montage-annotation-contenu { display: grid; gap: 4px; min-width: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.montage-annotation-contenu small { color: var(--pw-gris); }
+.montage-annotation.hors-montage { border-style: dashed; }
+.montage-annotation-contenu .montage-annotation-avertissement { color: #a5392a; }
+#montage-annotation-erreur:empty, .montage-annotations:empty { display: none; }
+#pub-fenetre .montage-section [hidden] { display: none; }
+
+/* Les annotations restent attachées au lecteur, quelle que soit la vue
+   du tableau. Le bandeau fait partie de la hauteur réservée aux commandes. */
+#lecteur-annotations { display: grid; gap: 6px; max-height: min(28vh, 180px); overflow-y: auto; overscroll-behavior: contain; }
+#lecteur-annotations[hidden] { display: none; }
+.lecteur-annotation { display: flex; align-items: baseline; gap: 10px; padding: 9px 12px; border-radius: 8px; border-left: 4px solid #176eaa; background: #eaf4fc; color: #173f60; font-size: 14px; line-height: 1.4; }
+.lecteur-annotation b { font-size: 11px; flex: none; text-transform: uppercase; letter-spacing: .04em; }
+.lecteur-annotation span { min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.lecteur-annotation.rappel { border-color: #9c6b12; background: #fff5d9; color: #65470e; }
+.lecteur-annotation.correction { border-color: #b14f47; background: #fff0ee; color: #7b312b; }
+.dark-mode .lecteur-annotation { background: #17364d; color: #e1f1fc; }
+.dark-mode .lecteur-annotation.rappel { background: #443715; color: #fff2c7; }
+.dark-mode .lecteur-annotation.correction { background: #4a2927; color: #ffe9e5; }
 @media (max-width: 700px) {
     #pub-fenetre.pub-montage .pw-corps { flex-direction: column; }
     #pub-fenetre.pub-montage .pw-rail { display: flex; flex: 0 0 auto; width: auto; flex-direction: row; flex-wrap: wrap; padding: 4px; border-right: 0; }
     #pub-fenetre.pub-montage .pw-rail-titre { display: none; }
     #pub-fenetre.pub-montage .pw-rail-item { width: auto; font-size: 12px; padding: 8px; }
     #pub-fenetre.pub-montage .pw-panneau { padding: 12px; }
+    .montage-annotation { align-items: start; flex-direction: column; }
+    .lecteur-annotation { align-items: start; flex-direction: column; gap: 3px; padding: 7px 9px; font-size: 13px; }
 }
