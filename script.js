@@ -20421,9 +20421,10 @@ if (!window.hasInjectedQuickMenu) {
 
 // Cacher le menu si on clique vraiment dans le vide sur le canvas
 canvas.addEventListener('pointerdown', (e) => {
+    if (mode !== 'pointer') return;
     const rawPos = getRawLogicalPos(e);
     const clickedObj = findObjectAt(rawPos.x, rawPos.y);
-    if (!clickedObj && mode === 'pointer') {
+    if (!clickedObj) {
         const quickMenu = document.getElementById('quick-edit-menu');
         if (quickMenu) quickMenu.classList.remove('visible');
     }
