@@ -168,8 +168,14 @@ Au Tableau crée à la racine du compte connecté un dossier privé
 en lecture « Tout utilisateur disposant du lien ». Le dossier n’est jamais
 partagé par l’application. Le lien contient l’identifiant du fichier, sans
 identifiant de dossier ; le lecteur télécharge ce fichier directement et ne
-liste aucune autre séance. Deux publications, même de titre et date
-identiques, reçoivent des identifiants et des liens différents.
+liste aucune autre séance.
+
+**Le lien d’une séance ne change pas.** Reprendre un tableau et le republier
+remplace le contenu de la séance déjà en ligne : l’adresse collée dans
+Pronote montre la nouvelle version, il n’y a rien à recoller. L’application
+retient, pour chaque tableau, la séance qu’il a publiée ; sur un autre poste
+elle la reconnaît à son nom et demande s’il faut la mettre à jour. Répondre
+non publie une séance de plus, avec son propre lien.
 
 ### Installation
 
@@ -179,7 +185,10 @@ identiques, reçoivent des identifiants et des liens différents.
    n’accorde aucun accès aux fichiers privés. Elle peut appartenir à un
    autre compte que celui qui héberge les séances.
 2. Dans **Compte Google et clé**, coller la clé et enregistrer. Les réglages
-   restent dans ce navigateur ; la clé de lecture figure dans les liens.
+   restent dans ce navigateur. **La clé ne figure pas dans les liens** : pour
+   que les élèves puissent lire une séance, elle doit être écrite dans
+   `lib/cloud/config.js`, qui vaut pour tout le site. L’y mettre permet aussi
+   d’en changer sans casser les liens déjà distribués.
 3. Cliquer **Connecter mon compte Google** et autoriser la publication.
    Seul l’enseignant effectue cette connexion. L’application demande le droit
    `drive.file` pour les fichiers qu’elle crée, sans accès général au Drive.

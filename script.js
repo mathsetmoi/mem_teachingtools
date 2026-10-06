@@ -2911,12 +2911,51 @@ if (btnClearMenu) {
     });
 }
 
+// ==============================================================================
+// RÉINITIALISER L'INTERFACE SANS PERDRE SES COMPTES
+// ==============================================================================
+// « J'ai cliqué sur la réinitialisation et cela a même enlevé ma clé API : je
+// dois tout reconfigurer. »
+//
+// Le bouton appelait « localStorage.clear() », qui n'efface pas l'interface :
+// il efface TOUT ce que le site a retenu dans ce navigateur. L'apparence, oui
+// — barres, favoris, tiroirs, positions —, mais avec elle la clé de lecture
+// des séances, l'adresse du lecteur, le dossier du Drive qu'on regarde, les
+// classes. Les premières se refont en trois clics ; les secondes se
+// retrouvent dans une console Google, un quart d'heure plus tard.
+//
+// On garde donc ce qui tient aux COMPTES et au rangement, et l'on ne jette que
+// ce qui tient à l'apparence. La liste ci-dessous est volontairement écrite en
+// préfixes : une clé nouvelle qui commence pareil sera protégée elle aussi.
+const REGLAGES_QUI_RESTENT = [
+    'AuTableau_publication',       // clé de lecture, adresse du lecteur, identifiant client, liens déjà donnés
+    'AuTableau_dossier',           // les dossiers du Drive : la liste, celui qu'on regarde, les dépliés
+    'AuTableau_source_tableaux',   // « Cet ordinateur » ou « Mon Drive »
+    'board_drive', 'board_dropbox', 'board_nextcloud',   // les comptes en ligne de l'explorateur
+    'auTableau_classes',           // les classes, quand elles sont rangées ici
+    'AuTableau_derniere_securite'  // la date de la dernière copie de sécurité
+];
+
+function reinitialiserLInterface() {
+    let gardes = [];
+    try {
+        gardes = Object.keys(localStorage)
+            .filter(k => REGLAGES_QUI_RESTENT.some(p => k.startsWith(p)))
+            .map(k => [k, localStorage.getItem(k)]);
+        localStorage.clear();
+        gardes.forEach(([k, v]) => { if (v !== null) localStorage.setItem(k, v); });
+    } catch (e) { /* stockage refusé : il n'y avait rien à nettoyer */ }
+    return gardes.length;
+}
+window.reinitialiserLInterface = reinitialiserLInterface;
+
+
 const btnTrashNow = document.getElementById('btn-trash-now');
 if (btnTrashNow) {
     btnTrashNow.addEventListener('click', () => {
         const modal = document.getElementById('confirm-modal');
         document.getElementById('confirm-title').innerText = "Tout effacer";
-        document.getElementById('confirm-text').innerText = "Voulez-vous vraiment tout effacer ? Vous pouvez aussi réinitialiser l'interface d'origine.";
+        document.getElementById("confirm-text").innerText = "Voulez-vous vraiment tout effacer ? « Réinitialiser l’interface » remet en plus les barres, les favoris et les tiroirs d’origine. Vos classes, vos dossiers du Drive et vos réglages de publication, eux, restent.";
 
         const btnContainer = modal.querySelector('div[style*="display: flex; gap"]');
         btnContainer.innerHTML = '';
@@ -2944,7 +2983,7 @@ if (btnTrashNow) {
         btnReset.style.flex = '1';
         btnReset.onclick = () => {
             clearBoardAndPages();
-            localStorage.clear();
+            reinitialiserLInterface();
             location.reload();
         };
         btnContainer.appendChild(btnReset);
@@ -29068,7 +29107,7 @@ function renderTrashList() {
             if (!sur) return;
             restoreFromTrash(item.id);
             setTimeout(() => {
-                localStorage.clear();
+                reinitialiserLInterface();
                 location.reload();
             }, 500);
         };
@@ -29183,7 +29222,7 @@ function promptDeleteItem(itemId, tab) {
         demanderConfirmation("Restaurer l'interface d'origine",
             "Cela réinitialisera le logiciel à son état initial. Êtes-vous sûr ?").then(sur => {
                 if (!sur) return;
-                localStorage.clear();
+                reinitialiserLInterface();
                 location.reload();
             });
     };

@@ -52,6 +52,26 @@ function environnement(options = {}) {
                 if (f.resourceKey) assert.equal(init.headers['X-Goog-Drive-Resource-Keys'], id + '/' + f.resourceKey);
                 return reponse(f.contenu);
             }
+            // Mettre à jour un fichier existant : même chemin, un identifiant en plus.
+            const majUpload = u.pathname.match(new RegExp("^\\/upload\\/drive\\/v3\\/files\\/(.+)$"));
+            if (majUpload) {
+                const vise = fichiers.get(decodeURIComponent(majUpload[1]));
+                assert.ok(vise, 'mise à jour d un fichier inconnu');
+                if (u.searchParams.get('uploadType') === 'resumable') {
+                    metadataEnAttente = { __maj: vise.id, ...JSON.parse(init.body) };
+                    return new Response(null, { status: 200, headers: {
+                        Location: 'https://www.googleapis.com/upload/drive/v3/files?upload_id=SESSION'
+                    } });
+                }
+                const boundary = init.body.type.split('boundary=')[1];
+                const parties = (await init.body.text()).split('--' + boundary);
+                const lire = p => JSON.parse(p.slice(p.indexOf('\r\n\r\n') + 4).trim());
+                assert.equal(method, 'PATCH');
+                const infos = lire(parties[1]);
+                assert.equal(infos.parents, undefined, 'une mise à jour ne redonne pas de parent');
+                Object.assign(vise, infos, { contenu: lire(parties[2]) });
+                return reponse({ id: vise.id });
+            }
             if (u.pathname === '/upload/drive/v3/files') {
                 if (u.searchParams.get('uploadType') === 'resumable') {
                     metadataEnAttente = JSON.parse(init.body);
@@ -63,6 +83,12 @@ function environnement(options = {}) {
                 if (method === 'PUT') {
                     metadata = metadataEnAttente;
                     contenu = JSON.parse(await init.body.text());
+                    if (metadata && metadata.__maj) {
+                        const vise = fichiers.get(metadata.__maj);
+                        const { __maj, ...infos } = metadata;
+                        Object.assign(vise, infos, { contenu });
+                        return reponse({ id: vise.id });
+                    }
                 } else {
                     const boundary = init.body.type.split('boundary=')[1];
                     const parties = (await init.body.text()).split('--' + boundary);
@@ -83,8 +109,9 @@ function environnement(options = {}) {
                     return reponse({ id });
                 }
                 const filtreDossiers = u.searchParams.get('q').includes('autableauDossier');
+                const nomCherche = (u.searchParams.get('q').match(/name='([^']*)'/) || [])[1];
                 const tous = [...fichiers.values()].filter(f => !f.trashed &&
-                    (filtreDossiers ? !!f.appProperties.autableauDossier : !!f.appProperties.autableauReplay));
+                    (filtreDossiers ? !!f.appProperties.autableauDossier : !!f.appProperties.autableauReplay) && (!nomCherche || f.name === nomCherche));
                 const debut = Number(u.searchParams.get('pageToken') || 0);
                 return reponse({ files: tous.slice(debut, debut + 1),
                     ...(debut + 1 < tous.length ? { nextPageToken: String(debut + 1) } : {}) });
@@ -118,10 +145,10 @@ function environnement(options = {}) {
         connecter: () => ctx.DrivePublication.connecter(ctx.AUTABLEAU_DRIVE_CLIENT_ID) };
 }
 
-test('chaque publication partage son fichier, jamais le parent ; deux titres identiques ont deux liens', async () => {
+test('chaque publication partage son fichier, jamais le parent ; sans mise à jour demandée, deux séances font deux liens', async () => {
     const e = environnement(); await e.connecter();
     const a = await e.ctx.DrivePublication.publier('meme-titre', seance('A'), 'CLE_TEST');
-    const b = await e.ctx.DrivePublication.publier('meme-titre', seance('B'), 'CLE_TEST');
+    const b = await e.ctx.DrivePublication.publier('meme-titre', seance('B'), 'CLE_TEST');   // sans « remplacerId »
     assert.notEqual(a.id, b.id);
     const ua = new URL(e.ctx.Publication.lienDe(a)), ub = new URL(e.ctx.Publication.lienDe(b));
     assert.notEqual(ua.href, ub.href);
@@ -203,11 +230,40 @@ test('autorisation refusée ou expirée : aucun accès réseau ni publication', 
     assert.equal(e.requetes.length, 0);
 });
 
-test('une clé locale remplace correctement la clé du site dans les liens', () => {
+test('la clé ne voyage jamais dans le lien, même réglée en local', () => {
     const e = environnement();
     e.ctx.AUTABLEAU_PUBLICATION.cle = 'AUTRE_CLE';
     const u = new URL(e.ctx.Publication.lienDe('SEANCE_TEST'));
-    assert.equal(u.searchParams.get('k'), 'CLE_TEST');
+    assert.equal(u.searchParams.has('k'), false, 'la clé reste sur le site, pas dans l adresse donnée aux élèves');
+    assert.equal(u.searchParams.get('id'), 'SEANCE_TEST');
+    assert.equal(u.href.includes('CLE_TEST'), false);
+});
+
+test('republier la même séance met à jour le fichier : même identifiant, donc même lien', async () => {
+    const e = environnement(); await e.connecter();
+    const premier = await e.ctx.DrivePublication.publier('cours-du-jour', seance('Version 1'), 'CLE_TEST');
+    assert.equal(premier.remplacee, false);
+    const vise = await e.ctx.DrivePublication.publieeSousLeNom('cours-du-jour');
+    assert.equal(vise.id, premier.id, 'on retrouve la séance par son nom, d un poste à l autre');
+    const second = await e.ctx.DrivePublication.publier('cours-du-jour', seance('Version 2'), 'CLE_TEST', vise.id);
+    assert.equal(second.id, premier.id);
+    assert.equal(second.remplacee, true);
+    assert.equal(e.ctx.Publication.lienDe(second), e.ctx.Publication.lienDe(premier));
+    const lu = await e.ctx.DrivePublic.lireFichier(premier.id, 'CLE_TEST', premier.resourceKey);
+    assert.equal(lu.contenu.seance.titre, 'Version 2', 'le lien d hier montre le travail d aujourd hui');
+    assert.equal([...e.fichiers.values()].filter(x => x.appProperties && x.appProperties.autableauReplay).length, 1,
+        'une seule séance sur le Drive, pas une de plus à chaque publication');
+    assert.equal(e.fichiers.get(premier.id).permissions.filter(p => p.type === 'anyone').length, 1,
+        'le partage existant n est pas redonné une seconde fois');
+});
+
+test('une mise à jour qui échoue ne jette pas la séance déjà en ligne', async () => {
+    const e = environnement(); await e.connecter();
+    const f = await e.ctx.DrivePublication.publier('cours', seance('En ligne'), 'CLE_TEST');
+    // La clé devient fausse : la relecture anonyme échouera après l envoi.
+    await assert.rejects(e.ctx.DrivePublication.publier('cours', seance('Nouvelle'), 'MAUVAISE_CLE', f.id));
+    assert.equal(e.fichiers.get(f.id).trashed, undefined, 'la séance publiée reste en ligne');
+    assert.ok(e.fichiers.get(f.id).permissions.some(p => p.type === 'anyone'), 'et son lien marche toujours');
 });
 
 test('une séance avec plus de 5 Mo de documents est envoyée par une session resumable', async () => {

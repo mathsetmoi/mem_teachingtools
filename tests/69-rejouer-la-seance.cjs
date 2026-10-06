@@ -135,19 +135,19 @@ module.exports = async function (browser) {
         window.AUTABLEAU_PUBLICATION = { dossier: '', cle: '', adresse: '' };
         Publication.poserLesReglages({ dossier: 'DOSSIER_TEST', cle: 'CLE_TEST', adresse: 'https://exemple.fr/Autableau' });
         const n = Publication.nomPublic('2026-09-22', '1ère 3', 'Suites & limites');
-        const long = Publication.lienDe('SEANCE_TEST');
-        // Un site qui les connaît (lib/cloud/config.js) rend le lien court.
-        window.AUTABLEAU_PUBLICATION = { dossier: 'DOSSIER_TEST', cle: 'CLE_TEST', adresse: '' };
-        const court = Publication.lienDe('SEANCE_TEST');
-        window.AUTABLEAU_PUBLICATION = { dossier: '', cle: '', adresse: '' };
-        return { nom: n, long, court, sansRien: Publication.nomPublic('', '', '').slice(0, 7) };
+        const avecCleLocale = Publication.lienDe('SEANCE_TEST');
+        // Le site qui porte la clé donne exactement le même lien.
+        window.AUTABLEAU_PUBLICATION = { cle: 'CLE_TEST', adresse: '' };
+        const avecCleDuSite = Publication.lienDe('SEANCE_TEST');
+        window.AUTABLEAU_PUBLICATION = { cle: '', adresse: '' };
+        return { nom: n, avecCleLocale, avecCleDuSite, sansRien: Publication.nomPublic('', '', '').slice(0, 7) };
     });
     r.egal('le nom du fichier public se lit, et ne porte ni accent ni espace',
         noms.nom, '2026-09-22-1ere-3-suites-limites', JSON.stringify(noms));
-    r.egal('le lien porte seulement le fichier et la clé, jamais le dossier',
-        noms.long, 'https://exemple.fr/Autableau/lecteur.html?id=SEANCE_TEST&k=CLE_TEST', JSON.stringify(noms));
-    r.egal('et il reste court quand le site les porte déjà',
-        noms.court, 'https://exemple.fr/Autableau/lecteur.html?id=SEANCE_TEST', JSON.stringify(noms));
+    r.egal('le lien ne porte que le fichier : ni la clé, ni le dossier',
+        noms.avecCleLocale, 'https://exemple.fr/Autableau/lecteur.html?id=SEANCE_TEST', JSON.stringify(noms));
+    r.egal('et il est le même, que la clé soit réglée ici ou portée par le site',
+        noms.avecCleDuSite, noms.avecCleLocale, JSON.stringify(noms));
     r.egal('une séance sans titre ni classe garde un nom', noms.sansRien, 'seance-');
 
     // ------------------------------------------------------------------
@@ -159,9 +159,15 @@ module.exports = async function (browser) {
         const original = DrivePublication.publier;
         let dedans;
         DrivePublication.publier = async (nom, contenu) => { dedans = contenu; return { id: 'SEANCE_TEST' }; };
+        // La recherche d'une séance du même nom passe aussi par l'adaptateur :
+        // ici, aucune n'existe, et la publication en crée donc une.
+        const existait = DrivePublication.existeEncore, cherchait = DrivePublication.publieeSousLeNom;
+        DrivePublication.existeEncore = async () => null;
+        DrivePublication.publieeSousLeNom = async () => null;
         const zone = document.createElement('div');
         const result = await Publication.publier({ titre: 'Suites & limites', classe: '1ère 3', date: '2026-09-22' }, true, zone);
         DrivePublication.publier = original;
+        DrivePublication.existeEncore = existait; DrivePublication.publieeSousLeNom = cherchait;
         return { lien: result && result.lien,
                  titre: dedans && dedans.seance.titre, classe: dedans && dedans.seance.classe,
                  pas: dedans ? (dedans.data.pages[0].filmArchive || []).length + (dedans.data.pages[0].film || []).length : 0 };
@@ -170,7 +176,7 @@ module.exports = async function (browser) {
         { titre: publiee.titre, classe: publiee.classe, pas: publiee.pas },
         { titre: 'Suites & limites', classe: '1ère 3', pas: 261 }, JSON.stringify(publiee));
     r.egal('la publication rend le lien direct de ce fichier', publiee.lien,
-        'https://exemple.fr/Autableau/lecteur.html?id=SEANCE_TEST&k=CLE_TEST');
+        'https://exemple.fr/Autableau/lecteur.html?id=SEANCE_TEST');
     r.verifie('la publication est aussi disponible dans le menu Exporter',
         await page.locator('#export-popup-menu #pub-depuis-export').count() === 1);
 
