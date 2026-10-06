@@ -31,7 +31,7 @@ jobs:
           node-version: '22'
 
       - name: Vérifier le partage et le montage des séances
-        run: node --test tests/publication-isolee.unit.cjs tests/montage-replay.unit.cjs tests/presse-papiers.unit.cjs tests/replay-mobile.unit.cjs tests/traces-fluides.unit.cjs
+        run: node --test tests/publication-isolee.unit.cjs tests/relais-seances.unit.cjs tests/montage-replay.unit.cjs tests/presse-papiers.unit.cjs tests/replay-mobile.unit.cjs tests/traces-fluides.unit.cjs
 
       # Playwright pilote le navigateur ; c'est la seule dépendance, et elle
       # ne concerne que les tests — le logiciel, lui, n'en charge aucune.

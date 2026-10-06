@@ -180,6 +180,42 @@ module.exports = async function (browser) {
     r.verifie('la publication est aussi disponible dans le menu Exporter',
         await page.locator('#export-popup-menu #pub-depuis-export').count() === 1);
 
+    // ------------------------------------------------------------------
+    // 3 bis. PAR LE RELAIS : AUCUNE CLÉ, ET LA SÉANCE RESTE PRIVÉE
+    // ------------------------------------------------------------------
+    // Deux comptes, deux relais : le lien doit nommer celui qui servira, et
+    // la séance publiée de cette façon ne reçoit aucun partage public.
+    const parRelais = await page.evaluate(async () => {
+        Relais.poser('lfb', 'https://script.google.com/macros/s/ESSAI_LFB/exec');
+        Publication.poserLesReglages({ profil: 'lfb', adresse: 'https://exemple.fr/Autableau' });
+        const lien = Publication.lienDe({ id: 'SEANCE_TEST', resourceKey: 'rk1' });
+
+        // Ce que l'adaptateur reçoit : on retient s'il lui a été demandé de
+        // partager, et ce que la vérification est allée lire.
+        const original = DrivePublication.publier;
+        const existait = DrivePublication.existeEncore, cherchait = DrivePublication.publieeSousLeNom;
+        DrivePublication.existeEncore = async () => null;
+        DrivePublication.publieeSousLeNom = async () => null;
+        let verifiePar = null, cleRecue = 'pas appelé';
+        DrivePublication.publier = async (nom, contenu, cle, remplacerId, parLeRelais) => {
+            cleRecue = cle;
+            if (parLeRelais) { verifiePar = 'relais'; await parLeRelais({ id: 'SEANCE_TEST' }); }
+            return { id: 'SEANCE_TEST', remplacee: false };
+        };
+        const lu = [];
+        const vraiLire = Relais.lireLaSeance;
+        Relais.lireLaSeance = async (cle, id) => { lu.push(cle + ':' + id); return { fiche: { id }, contenu: {} }; };
+        const zone = document.createElement('div');
+        const res = await Publication.publier({ titre: 'Suites', classe: '1ère 3', date: '2026-09-22' }, true, zone);
+        DrivePublication.publier = original; Relais.lireLaSeance = vraiLire;
+        DrivePublication.existeEncore = existait; DrivePublication.publieeSousLeNom = cherchait;
+        return { lien, lienPublie: res && res.lien, verifiePar, cleRecue, lu };
+    });
+    r.egal('le lien nomme le relais, et ne porte ni clé ni clé de ressource',
+        parRelais.lien, 'https://exemple.fr/Autableau/lecteur.html?id=SEANCE_TEST&r=lfb', JSON.stringify(parRelais));
+    r.egal('la séance est vérifiée par le relais, comme la verra l’élève',
+        { par: parRelais.verifiePar, lu: parRelais.lu }, { par: 'relais', lu: ['lfb:SEANCE_TEST'] }, JSON.stringify(parRelais));
+
     // Le texte à coller dans Pronote porte le lien, la date et le titre.
     const texte = await page.evaluate(() => Publication.resume(
         { titre: 'Suites & limites', classe: '1ère 3', date: '2026-09-22' },

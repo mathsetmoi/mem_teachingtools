@@ -207,7 +207,9 @@ test('retirer une séance bloque son lien et conserve l’autre, avec pagination
     await assert.rejects(e.ctx.DrivePublic.lireFichier(a.id, 'CLE_TEST', a.resourceKey), /Not found/);
     assert.equal((await e.ctx.DrivePublic.lireFichier(b.id, 'CLE_TEST', b.resourceKey)).contenu.seance.titre, 'B');
     assert.equal((await e.ctx.DrivePublication.lister()).length, 1);
-    assert.equal(e.fichiers.get(a.id).trashed, undefined, 'le retrait enlève uniquement le droit public');
+    assert.equal(e.fichiers.get(a.id).trashed, true,
+        'la copie publiée part à la corbeille : couper le partage ne suffit pas quand c’est un relais qui sert');
+    assert.equal(e.fichiers.get(b.id).trashed, undefined, 'et l’autre séance n’est pas touchée');
 });
 
 for (const [nom, options, cle, message] of [

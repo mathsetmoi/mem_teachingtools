@@ -177,6 +177,59 @@ retient, pour chaque tableau, la séance qu’il a publiée ; sur un autre poste
 elle la reconnaît à son nom et demande s’il faut la mettre à jour. Répondre
 non publie une séance de plus, avec son propre lien.
 
+### Le relais : publier sans aucune clé
+
+Pour qu'un navigateur sans compte lise un fichier du Drive, Google exige une
+clé d'API — qui arrive donc chez l'élève, et donc chez n'importe qui. Le
+**relais** renverse la chose : un petit script déployé dans votre compte
+(`relais/relais-seances.gs`) lit la séance **sous votre identité** et la
+renvoie. Conséquences :
+
+- **aucune clé ne circule**, ni dans les liens ni dans le code du site ;
+- **les séances restent privées** dans votre Drive : elles ne sont partagées
+  avec personne, pas même « par lien » ;
+- le relais ne sert **que** les fichiers `.prof` rangés dans le dossier
+  `Au Tableau — séances publiées`, et ne les liste jamais : qui n'a pas le
+  lien d'une séance ne peut pas la découvrir.
+
+**Un relais par compte Google.** Un script s'exécute sous un seul compte : il
+en faut un dans le compte de l'établissement pour les cours du lycée, un dans
+le compte personnel pour le reste. Chaque relais porte un nom court — `lfb`,
+`mem` — que le lien de la séance mentionne (`?r=lfb&id=…`) ; l'adresse
+complète, elle, vit dans les réglages, de sorte qu'un redéploiement ne casse
+aucun lien déjà collé dans Pronote.
+
+Le déploiement est décrit pas à pas en tête de `relais/relais-seances.gs` :
+cinq minutes par compte. Ensuite, dans la fenêtre **Publier pour le cahier de
+textes**, rubrique **Comptes et relais**, coller l'adresse `…/exec` en face du
+compte, et cliquer **Essayer ce relais** : il répond sous quel compte il tourne,
+ce qui évite de les intervertir.
+
+Reste un pas qu'on oublie, et dont tout dépend : **reporter l'adresse dans le
+site**. Enregistrée dans la fenêtre, elle ne vit que dans le navigateur du
+professeur — assez pour publier et relire ses propres liens, mais l'élève
+arrive sans rien dans son stockage, et le lien ne porte que le nom court du
+relais. Le bouton **Copier la ligne du site** donne la ligne telle quelle ; elle
+va dans `lib/cloud/config.js`, rubrique `relais`. Sans elle, le lecteur
+répond à l'élève : « Ce lien désigne un relais que ce site ne connaît pas. »
+Cette adresse n'est pas un secret — ce point d'entrée ne sert que les séances du
+dossier publié, une par une, et ne les liste jamais.
+
+Au moment de publier, **Publier dans** choisit le compte. Le compte où la
+séance est écrite est celui de la connexion Google ; le profil choisi dit quel
+relais la servira. Les deux doivent désigner le même compte — la vérification
+faite juste après l'envoi s'en assure et le dit sans détour quand ce n'est pas
+le cas.
+
+Si votre établissement interdit les applications web ouvertes à tous, le
+déploiement ne proposera que « les utilisateurs de votre organisation » : les
+élèves du domaine liront, les familles non. L'essai du relais le dit avant que
+vous ne distribuiez un lien mort.
+
+**La clé d'API reste acceptée** pour les liens déjà distribués : le lecteur lit
+encore ceux qui la portent. Les nouveaux liens, eux, n'en contiennent plus.
+
+
 ### Installation
 
 1. Activer **Google Drive API** dans Google Cloud, puis créer une **clé API**.
@@ -275,6 +328,7 @@ recharge la page.
 | `plugin.js` | Les quatre-vingt-six outils |
 | `style.css` | L'apparence |
 | `lib/` | Les bibliothèques fournies (voir `NOTICE.md`) |
+| `relais/` | Le relais Apps Script à déployer dans chaque compte Google |
 | `lib/dossier/` | Mes tableaux dans mon Drive (ce fork) |
 | `lib/numworks/` | La calculatrice NumWorks, collège ou lycée (ce fork) |
 | `lib/automatismes/` | Les automatismes : banque de questions, séries, journal de ce qui a été donné (ce fork) |
