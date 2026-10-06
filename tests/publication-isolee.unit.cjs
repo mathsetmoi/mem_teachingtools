@@ -24,7 +24,9 @@ function environnement(options = {}) {
     const dossier = (id, permissions = [OWNER]) => ({ id, name: 'Dossier', mimeType: 'application/vnd.google-apps.folder',
         appProperties: { autableauDossier: MARQUE }, permissions: copie(permissions), trashed: false });
     if (options.ancienDossierPartage) fichiers.set('ancien', dossier('ancien', [OWNER, ANYONE]));
+    let pannes = options.pannes || 0;
     const ctx = { URL, URLSearchParams, Blob, crypto: webcrypto, console,
+        setTimeout, clearTimeout,   // le navigateur les a ; la réessai de Drive s en sert
         Date: class extends Date { static now() { return now; } },
         location: new URL('https://mathsetmoi.github.io/Autableau/'),
         document: { readyState: 'loading', addEventListener() {} },
@@ -41,6 +43,8 @@ function environnement(options = {}) {
         fetch: async (url, init = {}) => {
             const u = new URL(url), method = init.method || 'GET';
             const auth = init.headers?.Authorization === 'Bearer JETON_PROF';
+            // Une défaillance passagère de Google, à la demande du test.
+            if (auth && pannes > 0) { pannes--; return erreur(500, 'Internal Error'); }
             requetes.push({ url: u.href, method, headers: init.headers, credentials: init.credentials });
             if (!auth) {
                 assert.equal(init.credentials, 'omit', 'aucun cookie du professeur chez le lecteur');
@@ -276,4 +280,22 @@ test('une séance avec plus de 5 Mo de documents est envoyée par une session re
     assert.equal(e.fichiers.get(f.id).contenu.data.assets.document.length, 6 * 1024 * 1024);
     assert.ok(e.requetes.some(r => r.method === 'PUT' && r.url.includes('upload_id=')));
     assert.equal(e.requetes.some(r => r.url.includes('uploadType=multipart')), false);
+});
+
+// « Publication impossible : Internal Error ». Le serveur de Google a des
+// défaillances passagères, et Google recommande lui-même d'attendre puis de
+// réessayer. Abandonner au premier refus faisait perdre une séance pour une
+// seconde de mauvaise humeur, en anglais et sans rien expliquer.
+test('une défaillance passagère de Google ne fait pas perdre la séance', async () => {
+    const e = environnement({ pannes: 1 }); await e.connecter();
+    const f = await e.ctx.DrivePublication.publier('cours', seance('Cours'), 'CLE_TEST');
+    assert.ok(f.id, 'la séance est publiée malgré le refus');
+});
+
+// Et quand la panne dure, on cesse d'insister, en français, en disant de
+// quel côté est le défaut.
+test('une panne qui dure est dite en français, et de qui elle vient', async () => {
+    const e = environnement({ pannes: 99 }); await e.connecter();
+    await assert.rejects(e.ctx.DrivePublication.publier('cours', seance('Cours'), 'CLE_TEST'),
+        /quatre fois de suite|de son côté/);
 });
