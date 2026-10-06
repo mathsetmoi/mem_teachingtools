@@ -252,3 +252,24 @@ test('quand le relais bute, « Essayer » reçoit la cause, l’élève non', ()
     assert.match(eleve.erreur, /n’a pas pu être lue|introuvable/);
     assert.equal(/permission|DriveApp/.test(eleve.erreur), false);
 });
+
+// Deux comptes Google dans le même navigateur, et l'adresse recopiée depuis
+// la barre d'adresse porte un « /u/1/ » : il désigne le deuxième compte
+// connecté CHEZ CELUI QUI COPIE, et ne veut rien dire ailleurs. On le retire
+// plutôt que de refuser.
+test('le « /u/1/ » des comptes multiples est retiré, pas reproché', async () => {
+    const e = lecteur(() => repondre({ relais: 'Au Tableau', compte: 'moi@gmail.com', pret: true }));
+    const avec = 'https://script.google.com/u/1/macros/s/AKfy_12345/exec';
+    assert.equal(e.ctx.Relais.pourquoiPasValable(avec), '');
+    await e.ctx.Relais.essayer(avec);
+    assert.ok(e.demandes[0].startsWith('https://script.google.com/macros/s/AKfy_12345/exec'), e.demandes[0]);
+    assert.equal(e.demandes[0].includes('/u/1/'), false, 'le numéro de compte ne part pas');
+});
+
+// Un 404 n'est pas une panne du relais : c'est une adresse qui ne désigne
+// aucun déploiement. Le dire évite de chercher du côté du script.
+test('un 404 dit d’où reprendre l’adresse', async () => {
+    const e = lecteur(() => new Response('', { status: 404 }));
+    await assert.rejects(e.ctx.Relais.essayer('https://script.google.com/macros/s/AKfy_12345/exec'),
+        /aucun déploiement|Gérer les déploiements/);
+});
