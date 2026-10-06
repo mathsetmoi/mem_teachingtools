@@ -273,3 +273,34 @@ test('un 404 dit d’où reprendre l’adresse', async () => {
     await assert.rejects(e.ctx.Relais.essayer('https://script.google.com/macros/s/AKfy_12345/exec'),
         /aucun déploiement|Gérer les déploiements/);
 });
+
+// Une adresse réglée dans ce navigateur l'emporte sur celle du site — c'est
+// ce qui permet de pointer un nouveau déploiement sans attendre une mise à
+// jour. Mais elle vieillit, et comme elle gagne, une adresse morte oubliée
+// dans un coin cassait toute publication alors que le site, lui, connaissait
+// la bonne. Elle doit s'effacer d'elle-même.
+test('une adresse locale périmée s’efface dès que celle du site répond', async () => {
+    const perimee = 'https://script.google.com/macros/s/PERIMEE_1234567/exec';
+    const e = lecteur((url) => url.startsWith(perimee)
+        ? new Response('', { status: 404 })
+        : repondre(seance('Les suites')));
+    e.ctx.Relais.poser('lfb', perimee);
+    assert.equal(e.ctx.Relais.adresseDe('lfb'), perimee, 'elle passe d’abord');
+
+    const { contenu } = await e.ctx.Relais.lireLaSeance('lfb', 'SEANCE_1aaaaaaaaaaaaaaaaaaaa');
+    assert.equal(contenu.seance.titre, 'Les suites');
+    assert.equal(e.demandes.length, 2, 'les deux adresses ont été essayées');
+    assert.equal(e.ctx.Relais.adresseDe('lfb'), EXEC, 'la périmée est oubliée');
+});
+
+// En revanche, un relais qui répond « je ne vois pas cette séance » n'est pas
+// une affaire d'adresse : inutile d'aller demander ailleurs, et surtout pas
+// d'effacer un réglage qui n'y est pour rien.
+test('un refus du relais n’efface rien et ne se rejoue pas ailleurs', async () => {
+    const autre = 'https://script.google.com/macros/s/AUTRE_1234567/exec';
+    const e = lecteur(() => repondre({ erreur: 'Séance introuvable ou retirée. Demandez le lien à votre enseignant.' }));
+    e.ctx.Relais.poser('lfb', autre);
+    await assert.rejects(e.ctx.Relais.lireLaSeance('lfb', 'SEANCE_1aaaaaaaaaaaaaaaaaaaa'), /introuvable ou retirée/);
+    assert.equal(e.demandes.length, 1, 'une seule demande');
+    assert.equal(e.ctx.Relais.adresseDe('lfb'), autre, 'le réglage est intact');
+});
