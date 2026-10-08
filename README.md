@@ -280,7 +280,9 @@ Au Tableau utilise un nouveau dossier privé pour les prochaines publications.
 Le lecteur est en lecture seule et ne sauvegarde rien dans les tableaux du
 visiteur. Le film porte toute la séance, grâce à
 `lib/tableau/film-complet.js`. Un tableau ancien sans film s’ouvre sur son
-état final avec une explication. Code : `lib/lecteur/`.
+état final avec une explication. Le replay reprend le mode nuit du tableau :
+une séance écrite en blanc sur fond sombre se rejoue sur fond sombre. Code :
+`lib/lecteur/`.
 
 
 ## La calculatrice NumWorks, collège ou lycée
