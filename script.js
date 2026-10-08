@@ -2809,6 +2809,10 @@ function saveState() {
         dernierEtatEncode = encode;
     }
     history.push(state); historyIndex++;
+    // CHAQUE PAGE GARDE LE MODE OÙ L'ON Y ÉCRIT. On passe en mode nuit pour
+    // une page, on revient au jour pour la suivante : un seul mode pour tout
+    // le tableau rejouait l'une ou l'autre sur le mauvais fond.
+    if (typeof pages !== 'undefined' && typeof isDarkMode !== 'undefined' && pages[currentPageIndex]) pages[currentPageIndex].modeNuit = isDarkMode;
     if (filmPas.length !== history.length) refaireLeFilm();   // désaccord : on repart du vrai historique
     trimHistory();
 
@@ -2844,11 +2848,7 @@ function restoreState(stateData) {
     if (state.teintePapier) bgColors.default = state.teintePapier;
     // Le replay se rejoue dans le mode où l'on a écrit. Un tableau d'avant
     // n'en dit rien : on garde alors le mode en place.
-    if (typeof state.modeNuit === 'boolean' && state.modeNuit !== isDarkMode) {
-        isDarkMode = state.modeNuit;
-        document.body.classList.toggle('dark-mode', isDarkMode);
-        if (typeof majInterrupteursBarre === 'function') majInterrupteursBarre();
-    }
+    if (typeof state.modeNuit === 'boolean') poserLeModeNuit(state.modeNuit);
     if (typeof majPastilleGrille === 'function') majPastilleGrille();
     const curseurGrille = document.getElementById('grid-weight-slider');
     if (curseurGrille) curseurGrille.value = gridWeight;
@@ -19699,6 +19699,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setTimeout(updateDockPositions, 50);
 });
+
+// Allumer ou éteindre le mode nuit sans redessiner : le lecteur s'en sert
+// pour donner à chaque page le mode où elle a été écrite.
+function poserLeModeNuit(nuit) {
+    if (!!nuit === isDarkMode) return;
+    isDarkMode = !!nuit;
+    document.body.classList.toggle('dark-mode', isDarkMode);
+    if (typeof majInterrupteursBarre === 'function') majInterrupteursBarre();
+}
+window.poserLeModeNuit = poserLeModeNuit;
 
 function toggleDarkMode() {
     isDarkMode = !isDarkMode;
