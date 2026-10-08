@@ -334,8 +334,7 @@ recharge la page.
 | `lib/dossier/` | Mes tableaux dans mon Drive (ce fork) |
 | `lib/numworks/` | La calculatrice NumWorks, collège ou lycée (ce fork) |
 | `lib/automatismes/` | Les automatismes : banque de questions, séries, journal de ce qui a été donné (ce fork) |
-| `lib/lecteur/` | Rejouer une séance publiée, et la publier pour Pronote (ce fork) |
-
+| `lib/lecteur/` | Rejouer une séance publiée, et la publier pour Pronote (ce fork) |
 | `lib/tableau/` | Le film entier de la séance, le déplacement de la vue (un dessin par image, la photo qui glisse) et le stylet (échantillons groupés, faux survol filtré, pression adoucie, gomme du stylet) — ce fork |
 | `tests/` | La suite de non-régression |
 
