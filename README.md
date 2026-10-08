@@ -280,7 +280,9 @@ Au Tableau utilise un nouveau dossier privé pour les prochaines publications.
 Le lecteur est en lecture seule et ne sauvegarde rien dans les tableaux du
 visiteur. Le film porte toute la séance, grâce à
 `lib/tableau/film-complet.js`. Un tableau ancien sans film s’ouvre sur son
-état final avec une explication. Code : `lib/lecteur/`.
+état final avec une explication. Le replay reprend le mode nuit du tableau :
+une séance écrite en blanc sur fond sombre se rejoue sur fond sombre. Code :
+`lib/lecteur/`.
 
 
 ## La calculatrice NumWorks, collège ou lycée
@@ -332,7 +334,8 @@ recharge la page.
 | `lib/dossier/` | Mes tableaux dans mon Drive (ce fork) |
 | `lib/numworks/` | La calculatrice NumWorks, collège ou lycée (ce fork) |
 | `lib/automatismes/` | Les automatismes : banque de questions, séries, journal de ce qui a été donné (ce fork) |
-| `lib/lecteur/` | Rejouer une séance publiée, et la publier pour Pronote (ce fork) |
+| `lib/lecteur/` | Rejouer une séance publiée, et la publier pour Pronote (ce fork) |
+
 | `lib/tableau/` | Le film entier de la séance, le déplacement de la vue (un dessin par image, la photo qui glisse) et le stylet (échantillons groupés, faux survol filtré, pression adoucie, gomme du stylet) — ce fork |
 | `tests/` | La suite de non-régression |
 

@@ -1872,6 +1872,10 @@ function stateForStorage() {
         // on rouvrait sa séance de géométrie sans ses axes.
         showAxes, pasAxes, gridWeight,
         teintePapier: bgColors.default,
+        // LE MODE NUIT PART AVEC LE TABLEAU. On écrit à la craie blanche sur
+        // le fond sombre : rejouée sur un fond blanc, la séance publiée ne
+        // montrait plus rien de ce qui avait été écrit.
+        modeNuit: isDarkMode,
         instruments: instrumentsPourEnregistrement()
     };
 }
@@ -2838,6 +2842,13 @@ function restoreState(stateData) {
     if (state.pasAxes !== undefined) pasAxes = state.pasAxes;
     if (state.gridWeight !== undefined) gridWeight = state.gridWeight;
     if (state.teintePapier) bgColors.default = state.teintePapier;
+    // Le replay se rejoue dans le mode où l'on a écrit. Un tableau d'avant
+    // n'en dit rien : on garde alors le mode en place.
+    if (typeof state.modeNuit === 'boolean' && state.modeNuit !== isDarkMode) {
+        isDarkMode = state.modeNuit;
+        document.body.classList.toggle('dark-mode', isDarkMode);
+        if (typeof majInterrupteursBarre === 'function') majInterrupteursBarre();
+    }
     if (typeof majPastilleGrille === 'function') majPastilleGrille();
     const curseurGrille = document.getElementById('grid-weight-slider');
     if (curseurGrille) curseurGrille.value = gridWeight;
@@ -19694,6 +19705,9 @@ function toggleDarkMode() {
     document.body.classList.toggle('dark-mode', isDarkMode);
     majInterrupteursBarre();
     draw();
+    // Le mode est enregistré avec le tableau : on le retient tout de suite,
+    // sans attendre le prochain trait.
+    if (typeof saveAppLocal === 'function') saveAppLocal();
 }
 
 window.addEventListener('keydown', (e) => {
