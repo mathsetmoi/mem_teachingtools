@@ -300,6 +300,11 @@ réseau la première fois, ensuite le navigateur le garde en cache. La page
 quand NumWorks met à jour son émulateur, les adresses qu'elle contient sont à
 relire dans le code source de leurs pages (c'est écrit en tête du fichier).
 
+**Dans le replay.** Après chaque saisie, la calculatrice photographie son
+écran et l’envoie au tableau : il part dans la séance comme un trait. Le
+lecteur montre à l’élève l’écran de chaque moment, même sans réseau, et le
+bouton **Utiliser la calculatrice** lui rend la vraie pour refaire le calcul.
+
 ## Ce qu'il y a dedans
 
 - **Écrire et tracer** : crayon, surligneur, laser, textes, formes, points,
