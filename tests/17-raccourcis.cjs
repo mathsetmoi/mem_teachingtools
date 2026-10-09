@@ -576,15 +576,28 @@ module.exports = async function (browser) {
     r.verifie('on remonte jusqu\'au haut de la page, pas au-delà',
         Math.abs(defile.auSommet.haut) < 2, JSON.stringify(defile.auSommet));
 
+    // LE SECOND CADRAGE NE DÉFAIT PAS UN GESTE. presenterLeDocument recadre
+    // une seconde fois 250 ms plus tard, pour le plein écran. Tombé après un
+    // geste, il le défaisait : sur un poste chargé, le Ctrl+molette ci-dessous
+    // perdait son zoom une fois sur deux. Un défilement fait aussitôt après
+    // « D » doit donc tenir.
+    const apresD = await page.evaluate(async () => {
+        presenterLeDocument('largeur');
+        defilerLaPresentation(300);
+        const tout = panY;
+        await new Promise(ok => setTimeout(ok, 400));
+        return { avant: tout, apres: panY, cadrage: cadrageDePresentation };
+    });
+    r.verifie('un défilement juste après « D » n\'est pas défait par le second cadrage',
+        apresD.cadrage === 'largeur' && Math.abs(apresD.apres - apresD.avant) < 0.5, JSON.stringify(apresD));
+
     // Ctrl+molette zoome, comme dans un lecteur de PDF — et le zoom non plus
-    // ne fait pas sortir la page de l'écran.
-    // presenterLeDocument recadre encore à 250 ms, après le plein écran.
-    // Attendre ce recadrage de préparation : lancé juste après les bascules
-    // ci-dessus, le zoom finissait AVANT lui et le test mesurait son annulation.
-    await page.waitForTimeout(300);
+    // ne fait pas sortir la page de l'écran. Aussitôt après « D », sans
+    // attendre le second cadrage : c'est ce que fait un professeur.
     const zoomEnPresentation = await page.evaluate(async () => {
         const c = document.getElementById('board');
         const doc = images[0];
+        presenterLeDocument('largeur');
         const avant = zoom;
         c.dispatchEvent(new WheelEvent('wheel', { deltaY: -300, ctrlKey: true, cancelable: true, bubbles: true }));
         await new Promise(ok => setTimeout(ok, 400));
