@@ -125,6 +125,63 @@
             attente.innerHTML = 'La calculatrice n’est pas arrivée.<br><small>Vérifiez la connexion à numworks.com, puis rechargez la fenêtre.</small>';
         }
     })();
+
+    // L'ÉCRAN PART AVEC LA SÉANCE. Ce qu'on tape sur la calculatrice vit dans
+    // l'émulateur, pas sur le tableau : le replay montrait une calculatrice
+    // neuve, sans aucun des calculs faits en classe. Après chaque saisie, on
+    // photographie l'écran et on l'envoie au tableau, qui le range dans la
+    // séance. Le lecteur le remontre au bon moment, même sans réseau.
+    (function () {
+        if (window.parent === window) return;
+        var L = 320, H = 240;          // l'écran des deux NumWorks
+        var dernier = '', minuteurs = [];
+
+        // L'écran est le plus grand canevas au format 4:3 — pas le miroir,
+        // qui ne sert qu'au plein écran.
+        function ecran() {
+            var meilleur = null, aire = 0;
+            var tous = document.querySelectorAll('canvas');
+            for (var i = 0; i < tous.length; i++) {
+                var c = tous[i];
+                if (c.classList.contains('calculator-mirror') || !c.width || !c.height) continue;
+                var rapport = c.width / c.height;
+                if (rapport < 1.2 || rapport > 1.45) continue;
+                if (c.width * c.height > aire) { aire = c.width * c.height; meilleur = c; }
+            }
+            return meilleur;
+        }
+
+        function photographier() {
+            var source = ecran();
+            if (!source) return;
+            var image;
+            try {
+                var copie = document.createElement('canvas');
+                copie.width = L; copie.height = H;
+                var ctx = copie.getContext('2d');
+                ctx.drawImage(source, 0, 0, L, H);
+                // Un canevas qu'on n'a pas pu lire revient transparent : on
+                // n'envoie pas une image vide à la place de l'écran.
+                var px = ctx.getImageData(0, 0, L, H).data, visible = false;
+                for (var k = 3; k < px.length; k += 4 * 97) { if (px[k] > 0) { visible = true; break; } }
+                if (!visible) return;
+                image = copie.toDataURL('image/png');
+            } catch (e) { return; }
+            if (image === dernier) return;
+            dernier = image;
+            window.parent.postMessage({ type: 'autableau:numworks', ecran: image }, '*');
+        }
+
+        // L'écran se met à jour un instant après la touche ; une courbe met
+        // plus longtemps à se tracer. Deux photos : tôt, puis une fois posé.
+        function apresSaisie() {
+            minuteurs.forEach(clearTimeout);
+            minuteurs = [setTimeout(photographier, 500), setTimeout(photographier, 2000)];
+        }
+        ['pointerup', 'keyup', 'touchend'].forEach(function (type) {
+            document.addEventListener(type, apresSaisie, true);
+        });
+    })();
     </script>
     <script src="https://cdn.numworks.com/9a427d0a.js"></script>
     <script src="https://cdn.numworks.com/886fb633.js"></script>
