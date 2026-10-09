@@ -22684,7 +22684,11 @@ window.documentPresente = documentPresente;
 // laissait le tableau vide et l'on ne savait plus où la page était passée.
 // Quand elle tient à l'écran, elle est centrée : c'est le cadrage « page
 // entière », et il n'y a rien à défiler.
+let recadrageDePresentation = null;   // le second cadrage, après le plein écran
 function bornerLaPresentation() {
+    // Un geste sur la page présentée : le second cadrage n'a plus à venir.
+    clearTimeout(recadrageDePresentation);
+    recadrageDePresentation = null;
     const doc = documentPresente();
     if (!doc) return;
     const L = canvas.clientWidth || window.innerWidth;
@@ -22890,8 +22894,20 @@ function presenterLeDocument(cadrageVoulu) {
         else cadrerSurLObjet(doc, 1);
         if (typeof draw === 'function') draw();
     };
+    // LE SECOND CADRAGE NE DÉFAIT PAS CE QU'ON A FAIT ENTRE-TEMPS. Il ne sert
+    // qu'au plein écran, qui change la taille de la fenêtre. Tombé après un
+    // Ctrl+molette ou un défilement — sur un poste chargé, 250 ms passent
+    // vite —, il ramenait la page à son cadrage et l'on perdait son zoom. On
+    // ne le fait donc que si la fenêtre a changé, et le premier geste l'annule
+    // (voir « bornerLaPresentation »).
+    const taille = () => canvas.clientWidth + '×' + canvas.clientHeight;
+    const tailleAvant = taille();
     cadrer();
-    setTimeout(cadrer, 250);
+    clearTimeout(recadrageDePresentation);
+    recadrageDePresentation = setTimeout(() => {
+        recadrageDePresentation = null;
+        if (taille() !== tailleAvant) cadrer();
+    }, 250);
 
     showToast(cadrageDePresentation === 'largeur'
         ? 'Toute la largeur — molette ou Page↓ pour descendre, Ctrl+molette pour zoomer'
