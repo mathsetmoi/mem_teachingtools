@@ -398,7 +398,9 @@ module.exports = async function (browser) {
     await ctx2.close();
 
     // COMME DANS L'APPLICATION PRONOTE : un navigateur neuf, qui ne connaît
-    // aucun relais, ouvre un lien « r=lfb » dont le site ignore l'adresse.
+    // aucun relais, ouvre un lien dont le site ignore le relais (« ecole »).
+    // Le relais du lycée, lui, est maintenant dans le site : on vérifie à la
+    // fin qu'un ancien lien « r=lfb », sans adresse, s'ouvre aussi.
     const ctx3 = await browser.newContext({ viewport: { width: 390, height: 760 }, isMobile: true, hasTouch: true });
     const p3 = await ctx3.newPage();
     const LYCEE = 'https://script.google.com/a/macros/lfbali.com/s/ESSAI_LYCEE/exec';
@@ -408,10 +410,10 @@ module.exports = async function (browser) {
         await route.fulfill({ status: 200, contentType: 'application/json',
             headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(seance) });
     });
-    await p3.goto(APP_URL + '?lecteur=1&id=SEANCE_TEST&r=lfb');
+    await p3.goto(APP_URL + '?lecteur=1&id=SEANCE_TEST&r=ecole');
     await p3.waitForFunction(() => /ne connaît pas/.test((document.getElementById('lecteur-message') || {}).textContent || ''), null, { timeout: 30000 });
     r.egal('sans l’adresse, le lien d’un relais inconnu du site ne peut rien lire', demandes.length, 0);
-    await p3.goto(APP_URL + '?lecteur=1&id=SEANCE_TEST&r=lfb&ra=' + encodeURIComponent(LYCEE));
+    await p3.goto(APP_URL + '?lecteur=1&id=SEANCE_TEST&r=ecole&ra=' + encodeURIComponent(LYCEE));
     let charge = true;
     try { await p3.waitForFunction(() => window.Lecteur && Lecteur.etat().chargee, null, { timeout: 30000 }); }
     catch (e) { charge = false; }
@@ -419,6 +421,17 @@ module.exports = async function (browser) {
     r.verifie('avec l’adresse que porte le lien, la séance s’ouvre sur un appareil neuf',
         charge && vu === 'Suites & limites' && demandes.length === 1 && demandes[0].startsWith(LYCEE + '?'),
         JSON.stringify({ charge, vu, demandes }));
+    // Les liens déjà collés dans Pronote ne portent que « r=lfb » : le site
+    // connaît maintenant ce relais, ils s'ouvrent donc tels quels.
+    demandes.length = 0;
+    await p3.goto(APP_URL + '?lecteur=1&id=SEANCE_TEST&r=lfb');
+    let ancien = true;
+    try { await p3.waitForFunction(() => window.Lecteur && Lecteur.etat().chargee, null, { timeout: 30000 }); }
+    catch (e) { ancien = false; }
+    const relaisDuSite = await p3.evaluate(() => Relais.adresseDuSiteDe('lfb'));
+    r.verifie('un ancien lien « r=lfb » s’ouvre par le relais du lycée, inscrit dans le site',
+        ancien && demandes.length === 1 && demandes[0].startsWith(relaisDuSite + '?'),
+        JSON.stringify({ ancien, demandes, relaisDuSite }));
     await ctx3.close();
 
     r.verifie('aucune erreur de page', erreurs.length === 0, erreurs.join(' | '));
