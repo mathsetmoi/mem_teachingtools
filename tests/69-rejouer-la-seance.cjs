@@ -211,8 +211,22 @@ module.exports = async function (browser) {
         DrivePublication.existeEncore = existait; DrivePublication.publieeSousLeNom = cherchait;
         return { lien, lienPublie: res && res.lien, verifiePar, cleRecue, lu };
     });
-    r.egal('le lien nomme le relais, et ne porte ni clé ni clé de ressource',
-        parRelais.lien, 'https://exemple.fr/Autableau/lecteur.html?id=SEANCE_TEST&r=lfb', JSON.stringify(parRelais));
+    // « Ce lien désigne un relais que ce site ne connaît pas (« lfb ») » : le
+    // relais réglé dans ce seul navigateur n'existait pas pour l'élève. Tant
+    // que le site ne le connaît pas, le lien en porte l'adresse.
+    r.egal('le lien nomme le relais, porte son adresse tant que le site l’ignore, et aucune clé',
+        parRelais.lien, 'https://exemple.fr/Autableau/lecteur.html?id=SEANCE_TEST&r=lfb&ra='
+            + encodeURIComponent('https://script.google.com/macros/s/ESSAI_LFB/exec'), JSON.stringify(parRelais));
+    const lienCourt = await page.evaluate(() => {
+        const pub = window.AUTABLEAU_PUBLICATION;
+        const avant = pub.relais;
+        pub.relais = Object.assign({}, avant, { lfb: 'https://script.google.com/macros/s/ESSAI_LFB/exec' });
+        const lien = Publication.lienDe({ id: 'SEANCE_TEST' });
+        pub.relais = avant;
+        return lien;
+    });
+    r.egal('dès que le site connaît le relais, le lien redevient court',
+        lienCourt, 'https://exemple.fr/Autableau/lecteur.html?id=SEANCE_TEST&r=lfb');
     r.egal('la séance est vérifiée par le relais, comme la verra l’élève',
         { par: parRelais.verifiePar, lu: parRelais.lu }, { par: 'relais', lu: ['lfb:SEANCE_TEST'] }, JSON.stringify(parRelais));
 
@@ -382,6 +396,30 @@ module.exports = async function (browser) {
 
     r.verifie('aucune erreur de page dans le lecteur', erreurs2.length === 0, erreurs2.join(' | '));
     await ctx2.close();
+
+    // COMME DANS L'APPLICATION PRONOTE : un navigateur neuf, qui ne connaît
+    // aucun relais, ouvre un lien « r=lfb » dont le site ignore l'adresse.
+    const ctx3 = await browser.newContext({ viewport: { width: 390, height: 760 }, isMobile: true, hasTouch: true });
+    const p3 = await ctx3.newPage();
+    const LYCEE = 'https://script.google.com/a/macros/lfbali.com/s/ESSAI_LYCEE/exec';
+    const demandes = [];
+    await p3.route(/^https:\/\/script\.google\.com\//, async route => {
+        demandes.push(route.request().url());
+        await route.fulfill({ status: 200, contentType: 'application/json',
+            headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(seance) });
+    });
+    await p3.goto(APP_URL + '?lecteur=1&id=SEANCE_TEST&r=lfb');
+    await p3.waitForFunction(() => /ne connaît pas/.test((document.getElementById('lecteur-message') || {}).textContent || ''), null, { timeout: 30000 });
+    r.egal('sans l’adresse, le lien d’un relais inconnu du site ne peut rien lire', demandes.length, 0);
+    await p3.goto(APP_URL + '?lecteur=1&id=SEANCE_TEST&r=lfb&ra=' + encodeURIComponent(LYCEE));
+    let charge = true;
+    try { await p3.waitForFunction(() => window.Lecteur && Lecteur.etat().chargee, null, { timeout: 30000 }); }
+    catch (e) { charge = false; }
+    const vu = await p3.evaluate(() => (document.getElementById('lecteur-nom') || {}).textContent || '');
+    r.verifie('avec l’adresse que porte le lien, la séance s’ouvre sur un appareil neuf',
+        charge && vu === 'Suites & limites' && demandes.length === 1 && demandes[0].startsWith(LYCEE + '?'),
+        JSON.stringify({ charge, vu, demandes }));
+    await ctx3.close();
 
     r.verifie('aucune erreur de page', erreurs.length === 0, erreurs.join(' | '));
     void path;

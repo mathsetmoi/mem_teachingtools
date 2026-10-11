@@ -304,3 +304,45 @@ test('un refus du relais n’efface rien et ne se rejoue pas ailleurs', async ()
     assert.equal(e.demandes.length, 1, 'une seule demande');
     assert.equal(e.ctx.Relais.adresseDe('lfb'), autre, 'le réglage est intact');
 });
+
+// « Ce lien désigne un relais que ce site ne connaît pas (« lfb ») » — dans
+// l'application Pronote, alors que le lien marchait sur l'ordinateur de
+// l'enseignant. L'adresse du relais du lycée n'était réglée que dans son
+// navigateur. Tant que le site ne la connaît pas, le lien la porte (« ra= »).
+const LYCEE = 'https://script.google.com/a/macros/lfbali.com/s/AKfy_lycee/exec';
+
+test('un relais que le site ne connaît pas se lit par l’adresse que porte le lien', async () => {
+    const e = lecteur(() => repondre(seance('Les vecteurs')));
+    e.ctx.AUTABLEAU_PUBLICATION = { relais: { mem: EXEC } };   // le site ne connaît que le relais perso
+    await assert.rejects(e.ctx.Relais.lireLaSeance('lfb', 'SEANCE_1aaaaaaaaaaaaaaaaaaaa'), /relais que ce site ne connaît pas/);
+    const { contenu } = await e.ctx.Relais.lireLaSeance('lfb', 'SEANCE_1aaaaaaaaaaaaaaaaaaaa', LYCEE);
+    assert.equal(contenu.seance.titre, 'Les vecteurs');
+    assert.ok(e.demandes[0].startsWith(LYCEE + '?id=SEANCE_1'), e.demandes[0]);
+});
+
+test('l’adresse du site passe avant celle du lien, qui ne sert qu’à son défaut', async () => {
+    const e = lecteur((url) => url.startsWith(EXEC) ? repondre(seance('Par le site')) : repondre(seance('Par le lien')));
+    const { contenu } = await e.ctx.Relais.lireLaSeance('lfb', 'SEANCE_1aaaaaaaaaaaaaaaaaaaa', LYCEE);
+    assert.equal(contenu.seance.titre, 'Par le site');
+    assert.equal(e.demandes.length, 1, 'le lien n’est pas sollicité quand le site répond');
+
+    // Le site pointe un déploiement retiré : le lien prend le relais.
+    const f = lecteur((url) => url.startsWith(EXEC) ? new Response('', { status: 404 }) : repondre(seance('Par le lien')));
+    const repris = await f.ctx.Relais.lireLaSeance('lfb', 'SEANCE_1aaaaaaaaaaaaaaaaaaaa', LYCEE);
+    assert.equal(repris.contenu.seance.titre, 'Par le lien');
+});
+
+test('l’adresse portée par un lien n’est suivie que si c’est une application Apps Script', async () => {
+    const e = lecteur(() => repondre(seance('?')));
+    e.ctx.AUTABLEAU_PUBLICATION = { relais: {} };
+    await assert.rejects(e.ctx.Relais.lireLaSeance('lfb', 'SEANCE_1aaaaaaaaaaaaaaaaaaaa', 'https://exemple-pirate.fr/macros/s/x/exec'),
+        /relais que ce site ne connaît pas/);
+    assert.equal(e.demandes.length, 0, 'aucune requête partie');
+});
+
+test('le site dit l’adresse qu’il connaît, sans celles de ce navigateur', () => {
+    const e = lecteur(() => repondre({}));
+    e.ctx.Relais.poser('lfb', LYCEE);
+    assert.equal(e.ctx.Relais.adresseDuSiteDe('lfb'), EXEC);
+    assert.equal(e.ctx.Relais.adresseDuSiteDe('inconnu'), '');
+});

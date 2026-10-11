@@ -208,10 +208,13 @@ ce qui évite de les intervertir.
 Reste un pas qu'on oublie, et dont tout dépend : **reporter l'adresse dans le
 site**. Enregistrée dans la fenêtre, elle ne vit que dans le navigateur du
 professeur — assez pour publier et relire ses propres liens, mais l'élève
-arrive sans rien dans son stockage, et le lien ne porte que le nom court du
-relais. Le bouton **Copier la ligne du site** donne la ligne telle quelle ; elle
-va dans `lib/cloud/config.js`, rubrique `relais`. Sans elle, le lecteur
-répond à l'élève : « Ce lien désigne un relais que ce site ne connaît pas. »
+arrive sans rien dans son stockage — l'application Pronote aussi. Tant que le
+site ne connaît pas un relais, chaque lien publié en porte donc l'adresse
+(`ra=…`) : il s'ouvre partout. Les liens publiés avant cela ne portaient que le
+nom court du relais, et l'élève lisait : « Ce lien désigne un relais que ce site
+ne connaît pas. » Reporter l'adresse dans le site les répare tous, et rend les
+liens suivants plus courts : le bouton **Copier la ligne du site** donne la
+ligne telle quelle ; elle va dans `lib/cloud/config.js`, rubrique `relais`.
 Cette adresse n'est pas un secret — ce point d'entrée ne sert que les séances du
 dossier publié, une par une, et ne les liste jamais.
 
